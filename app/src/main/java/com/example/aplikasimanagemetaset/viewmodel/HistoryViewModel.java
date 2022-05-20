@@ -1,6 +1,7 @@
 package com.example.aplikasimanagemetaset.viewmodel;
 
 import android.app.Application;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
@@ -39,6 +40,33 @@ public class HistoryViewModel extends AndroidViewModel {
 
     public LiveData<List<ModelDatabase>> getDataLaporan() {
         return modelLaundry;
+    }
+
+    public void updateData(
+            final int uid,
+            final String kategori,
+            final String image,
+            final String nama,
+            final String lokasi,
+            final String tanggal,
+            final String isi_laporan,
+            final String telepon
+    ) {
+        Completable.fromAction(() -> {
+            ModelDatabase modelDatabase = new ModelDatabase();
+            modelDatabase.uid = uid;
+            modelDatabase.kategori = kategori;
+//        modelDatabase.image = image;
+            modelDatabase.nama = nama;
+            modelDatabase.lokasi = lokasi;
+            modelDatabase.tanggal = tanggal;
+            modelDatabase.isi_laporan = isi_laporan;
+            modelDatabase.telepon = telepon;
+            databaseDao.updateSingleReport(modelDatabase);
+        })
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe();
     }
 
     public void deleteDataById(final int uid) {

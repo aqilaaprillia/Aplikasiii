@@ -10,6 +10,11 @@
         <entry key="..\:/Users/LENOVO/AndroidStudioProjects/AplikasiManagemetAset/app/src/main/res/layout/activity_history.xml" value="0.1" />
         <entry key="..\:/Users/LENOVO/AndroidStudioProjects/AplikasiManagemetAset/app/src/main/res/layout/activity_main.xml" value="0.20416666666666666" />
         <entry key="..\:/Users/LENOVO/AndroidStudioProjects/AplikasiManagemetAset/app/src/main/res/layout/activity_report.xml" value="0.20416666666666666" />
+        <entry key="app/src/main/res/layout/activity_history.xml" value="0.33177083333333335" />
+        <entry key="app/src/main/res/layout/activity_main.xml" value="0.31844660194174756" />
+        <entry key="app/src/main/res/layout/activity_report.xml" value="0.18177083333333333" />
+        <entry key="app/src/main/res/layout/list_item_history.xml" value="0.33177083333333335" />
+        <entry key="app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml" value="0.34791666666666665" />
       </map>
     </option>
   </component>

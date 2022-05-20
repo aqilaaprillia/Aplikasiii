@@ -14,6 +14,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
@@ -33,8 +34,10 @@ import androidx.lifecycle.ViewModelProvider;
 import com.example.AplikasiManagemetAset.BuildConfig;
 import com.example.AplikasiManagemetAset.R;
 
+import com.example.aplikasimanagemetaset.model.ModelDatabase;
 import com.example.aplikasimanagemetaset.utils.BitmapManager;
 import com.example.aplikasimanagemetaset.utils.Constant;
+import com.example.aplikasimanagemetaset.viewmodel.HistoryViewModel;
 import com.example.aplikasimanagemetaset.viewmodel.InputDataViewModel;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
@@ -55,245 +58,292 @@ import java.util.Locale;
 
 public class ReportActivity extends AppCompatActivity {
 
-    public static final String DATA_TITLE = "TITLE";
-    public static final int REQUEST_PICK_PHOTO = 1;
-    int REQ_CAMERA = 101;
-    File fileDirectoty, imageFilename;
-    String strTitle, strTimeStamp, strImageName, strFilePath, strBase64Photo;
-    InputDataViewModel inputDataViewModel;
-    Toolbar toolbar;
-    TextView tvTitle;
-    ImageView imageLaporan;
-    LinearLayout layoutImage;
-    ExtendedFloatingActionButton fabSend;
-    EditText inputNama, inputTelepon, inputLokasi, inputTanggal, inputLaporan;
+  public static final String DATA_TITLE = "TITLE";
+  public static final int REQUEST_PICK_PHOTO = 1;
+  int REQ_CAMERA = 101;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_report);
+  int uid = 0;
+  public String MODE = "add";
 
-        setStatusBar();
-        setInitLayout();
-        setSendLaporan();
+  File fileDirectoty, imageFilename;
+  String strTitle, strTimeStamp, strImageName, strFilePath, strBase64Photo;
+  InputDataViewModel inputDataViewModel;
+  HistoryViewModel historyViewModel;
+  Toolbar toolbar;
+  TextView tvTitle;
+  ImageView imageLaporan;
+  LinearLayout layoutImage;
+  ExtendedFloatingActionButton fabSend;
+  EditText inputNama, inputTelepon, inputLokasi, inputTanggal, inputLaporan;
+
+  @Override
+  protected void onCreate(Bundle savedInstanceState) {
+    super.onCreate(savedInstanceState);
+    setContentView(R.layout.activity_report);
+
+    setStatusBar();
+    setInitLayout();
+    setSendLaporan();
+    setIntentExtra();
+  }
+
+  private void setIntentExtra() {
+    Intent intent = getIntent();
+    String mode = intent.getStringExtra("EXTRA_TYPE");
+
+    if (mode == null) return;
+
+    MODE = mode;
+
+    uid = intent.getIntExtra("EXTRA_UID", 0);
+//    String image = intent.getDataString("EXTRA_IMAGE");
+    String nama = intent.getStringExtra("EXTRA_NAMA");
+    String telepon = intent.getStringExtra("EXTRA_TELEPON");
+    String lokasi = intent.getStringExtra("EXTRA_LOKASI");
+    String tanggal = intent.getStringExtra("EXTRA_TANGGAL");
+    String isi_laporan = intent.getStringExtra("EXTRA_ISI_LAPORAN");
+
+    fabSend.setText("UPDATE LAPORAN");
+
+//    convertImage(image);
+
+    inputNama.setText(nama);
+    inputTelepon.setText(telepon);
+    inputLokasi.setText(lokasi);
+    inputTanggal.setText(tanggal);
+    inputLaporan.setText(isi_laporan);
+  }
+
+  private void setInitLayout() {
+    toolbar = findViewById(R.id.toolbar);
+    tvTitle = findViewById(R.id.tvTitle);
+    imageLaporan = findViewById(R.id.imageLaporan);
+    layoutImage = findViewById(R.id.layoutImage);
+    fabSend = findViewById(R.id.fabSend);
+    inputNama = findViewById(R.id.inputNama);
+    inputTelepon = findViewById(R.id.inputTelepon);
+    inputLokasi = findViewById(R.id.inputLokasi);
+    inputTanggal = findViewById(R.id.inputTanggal);
+    inputLaporan = findViewById(R.id.inputLaporan);
+
+    //get data intent
+    strTitle = getIntent().getExtras().getString(DATA_TITLE);
+    if (strTitle != null) {
+      tvTitle.setText(strTitle);
     }
 
-    private void setInitLayout() {
-        toolbar = findViewById(R.id.toolbar);
-        tvTitle = findViewById(R.id.tvTitle);
-        imageLaporan = findViewById(R.id.imageLaporan);
-        layoutImage = findViewById(R.id.layoutImage);
-        fabSend = findViewById(R.id.fabSend);
-        inputNama = findViewById(R.id.inputNama);
-        inputTelepon = findViewById(R.id.inputTelepon);
-        inputLokasi = findViewById(R.id.inputLokasi);
-        inputTanggal = findViewById(R.id.inputTanggal);
-        inputLaporan = findViewById(R.id.inputLaporan);
+    setSupportActionBar(toolbar);
+    if (getSupportActionBar() != null) {
+      getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+      getSupportActionBar().setDisplayShowTitleEnabled(false);
+    }
 
-        //get data intent
-        strTitle = getIntent().getExtras().getString(DATA_TITLE);
-        if (strTitle != null) {
-            tvTitle.setText(strTitle);
+    inputLokasi.setText(Constant.lokasiPengaduan);
+
+    inputDataViewModel = new ViewModelProvider(this, ViewModelProvider
+            .AndroidViewModelFactory
+            .getInstance(this.getApplication()))
+            .get(InputDataViewModel.class);
+    historyViewModel = new ViewModelProvider(this, ViewModelProvider
+            .AndroidViewModelFactory
+            .getInstance(this.getApplication()))
+            .get(HistoryViewModel.class);
+
+    layoutImage.setOnClickListener(v -> {
+      AlertDialog.Builder pictureDialog = new AlertDialog.Builder(this);
+      pictureDialog.setTitle("Upload Foto Bukti Laporan");
+      String[] pictureDialogItems = {"Pilih foto dari galeri", "Ambil foto lewat kamera"};
+
+      pictureDialog.setItems(pictureDialogItems,
+              (dialog, which) -> {
+                switch (which) {
+                  case 0:
+                    Dexter.withContext(ReportActivity.this)
+                            .withPermissions(Manifest.permission.CAMERA,
+                                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                                    Manifest.permission.ACCESS_FINE_LOCATION)
+                            .withListener(new MultiplePermissionsListener() {
+                              @Override
+                              public void onPermissionsChecked(MultiplePermissionsReport report) {
+                                if (report.areAllPermissionsGranted()) {
+                                  Intent galleryIntent = new Intent(Intent.ACTION_PICK,
+                                          MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                                  startActivityForResult(galleryIntent, REQUEST_PICK_PHOTO);
+                                }
+                              }
+
+                              @Override
+                              public void onPermissionRationaleShouldBeShown(List<PermissionRequest> permissions, PermissionToken token) {
+                                token.continuePermissionRequest();
+                              }
+                            }).check();
+                    break;
+                  case 1:
+                    Dexter.withContext(ReportActivity.this)
+                            .withPermissions(Manifest.permission.CAMERA,
+                                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                                    Manifest.permission.ACCESS_FINE_LOCATION)
+                            .withListener(new MultiplePermissionsListener() {
+                              @Override
+                              public void onPermissionsChecked(MultiplePermissionsReport report) {
+                                if (report.areAllPermissionsGranted()) {
+                                  try {
+                                    Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                                    intent.putExtra(MediaStore.EXTRA_OUTPUT, FileProvider.getUriForFile(ReportActivity.this, BuildConfig.APPLICATION_ID + ".provider", createImageFile()));
+                                    startActivityForResult(intent, REQ_CAMERA);
+                                  } catch (IOException ex) {
+                                    Toast.makeText(ReportActivity.this, "Gagal membuka kamera!", Toast.LENGTH_SHORT).show();
+                                  }
+                                }
+                              }
+
+                              @Override
+                              public void onPermissionRationaleShouldBeShown(List<PermissionRequest> permissions, PermissionToken token) {
+                                token.continuePermissionRequest();
+                              }
+                            }).check();
+                    break;
+                }
+              });
+      pictureDialog.show();
+    });
+
+    inputTanggal.setOnClickListener(view -> {
+      Calendar tanggalJemput = Calendar.getInstance();
+      DatePickerDialog.OnDateSetListener date = (view1, year, monthOfYear, dayOfMonth) -> {
+        tanggalJemput.set(Calendar.YEAR, year);
+        tanggalJemput.set(Calendar.MONTH, monthOfYear);
+        tanggalJemput.set(Calendar.DAY_OF_MONTH, dayOfMonth);
+
+        String strFormatDefault = "d MMMM yyyy";
+        SimpleDateFormat simpleDateFormat = new SimpleDateFormat(strFormatDefault, Locale.getDefault());
+        inputTanggal.setText(simpleDateFormat.format(tanggalJemput.getTime()));
+      };
+
+      new DatePickerDialog(ReportActivity.this, date,
+              tanggalJemput.get(Calendar.YEAR),
+              tanggalJemput.get(Calendar.MONTH),
+              tanggalJemput.get(Calendar.DAY_OF_MONTH)).show();
+    });
+  }
+
+  private void setSendLaporan() {
+    fabSend.setOnClickListener(v -> {
+      String strNama = inputNama.getText().toString();
+      String strTelepon = inputTelepon.getText().toString();
+      String strLokasi = inputLokasi.getText().toString();
+      String strTanggal = inputTanggal.getText().toString();
+      String strLaporan = inputLaporan.getText().toString();
+
+      if (MODE.equals("add")) {
+        if (strFilePath == null || strNama.isEmpty() || strTelepon.isEmpty() || strLokasi.isEmpty() || strTanggal.isEmpty() || strLaporan.isEmpty()) {
+          Toast.makeText(ReportActivity.this, "Data tidak boleh ada yang kosong!", Toast.LENGTH_SHORT).show();
+          return;
         }
-
-        setSupportActionBar(toolbar);
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setDisplayShowTitleEnabled(false);
+        inputDataViewModel.addLaporan(strTitle, strBase64Photo, strNama, strLokasi, strTanggal, strLaporan, strTelepon);
+        Toast.makeText(ReportActivity.this, "Laporan Anda terkirim, tunggu info selanjutnya ya!", Toast.LENGTH_SHORT).show();
+      } else {
+        if (strNama.isEmpty() || strTelepon.isEmpty() || strLokasi.isEmpty() || strTanggal.isEmpty() || strLaporan.isEmpty()) {
+          Toast.makeText(ReportActivity.this, "Data tidak boleh ada yang kosong!", Toast.LENGTH_SHORT).show();
+          return;
         }
+        // update
+        historyViewModel.updateData(uid, strTitle, null, strNama, strLokasi, strTanggal, strLaporan, strTelepon );
+        Toast.makeText(ReportActivity.this, "Laporan Anda telah diupdate", Toast.LENGTH_SHORT).show();
+      }
+      finish();
+    });
+  }
 
-        inputLokasi.setText(Constant.lokasiPengaduan);
+  private File createImageFile() throws IOException {
+    strTimeStamp = new SimpleDateFormat("dd MMMM yyyy HH:mm").format(new Date());
+    strImageName = "IMG_";
+    fileDirectoty = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "");
+    imageFilename = File.createTempFile(strImageName, ".jpg", fileDirectoty);
+    strFilePath = imageFilename.getAbsolutePath();
+    return imageFilename;
+  }
 
-        inputDataViewModel = new ViewModelProvider(this, ViewModelProvider
-                .AndroidViewModelFactory
-                .getInstance(this.getApplication()))
-                .get(InputDataViewModel.class);
+  @Override
+  public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    for (int grantResult : grantResults) {
+      if (grantResult == PackageManager.PERMISSION_GRANTED) {
+        Intent intent = getIntent();
+        finish();
+        startActivity(intent);
+      }
+    }
+  }
 
-        layoutImage.setOnClickListener(v -> {
-            AlertDialog.Builder pictureDialog = new AlertDialog.Builder(this);
-            pictureDialog.setTitle("Upload Foto Bukti Laporan");
-            String[] pictureDialogItems = {"Pilih foto dari galeri", "Ambil foto lewat kamera"};
+  @Override
+  protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    super.onActivityResult(requestCode, resultCode, data);
+    if (requestCode == REQ_CAMERA && resultCode == RESULT_OK) {
+      convertImage(strFilePath);
+    } else if (requestCode == REQUEST_PICK_PHOTO && resultCode == RESULT_OK) {
+      Uri selectedImage = data.getData();
+      String[] filePathColumn = {MediaStore.Images.Media.DATA};
+      assert selectedImage != null;
+      Cursor cursor = getContentResolver().query(selectedImage, filePathColumn, null, null, null);
+      assert cursor != null;
+      cursor.moveToFirst();
+      int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
+      String mediaPath = cursor.getString(columnIndex);
+      cursor.close();
+      strFilePath = mediaPath;
+      convertImage(mediaPath);
+    }
+  }
 
-            pictureDialog.setItems(pictureDialogItems,
-                    (dialog, which) -> {
-                        switch (which) {
-                            case 0:
-                                Dexter.withContext(ReportActivity.this)
-                                        .withPermissions(Manifest.permission.CAMERA,
-                                                Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                                                Manifest.permission.ACCESS_COARSE_LOCATION,
-                                                Manifest.permission.ACCESS_FINE_LOCATION)
-                                        .withListener(new MultiplePermissionsListener() {
-                                            @Override
-                                            public void onPermissionsChecked(MultiplePermissionsReport report) {
-                                                if (report.areAllPermissionsGranted()) {
-                                                    Intent galleryIntent = new Intent(Intent.ACTION_PICK,
-                                                            MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-                                                    startActivityForResult(galleryIntent, REQUEST_PICK_PHOTO);
-                                                }
-                                            }
+  private void convertImage(String imageFilePath) {
+    File imageFile = new File(imageFilePath);
+    if (imageFile.exists()) {
+      BitmapFactory.Options options = new BitmapFactory.Options();
+      final Bitmap bitmapImage = BitmapFactory.decodeFile(strFilePath, options);
 
-                                            @Override
-                                            public void onPermissionRationaleShouldBeShown(List<PermissionRequest> permissions, PermissionToken token) {
-                                                token.continuePermissionRequest();
-                                            }
-                                        }).check();
-                                break;
-                            case 1:
-                                Dexter.withContext(ReportActivity.this)
-                                        .withPermissions(Manifest.permission.CAMERA,
-                                                Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                                                Manifest.permission.ACCESS_COARSE_LOCATION,
-                                                Manifest.permission.ACCESS_FINE_LOCATION)
-                                        .withListener(new MultiplePermissionsListener() {
-                                            @Override
-                                            public void onPermissionsChecked(MultiplePermissionsReport report) {
-                                                if (report.areAllPermissionsGranted()) {
-                                                    try {
-                                                        Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                                                        intent.putExtra(MediaStore.EXTRA_OUTPUT, FileProvider.getUriForFile(ReportActivity.this, BuildConfig.APPLICATION_ID + ".provider", createImageFile()));
-                                                        startActivityForResult(intent, REQ_CAMERA);
-                                                    } catch (IOException ex) {
-                                                        Toast.makeText(ReportActivity.this, "Gagal membuka kamera!", Toast.LENGTH_SHORT).show();
-                                                    }
-                                                }
-                                            }
+      Glide.with(this)
+              .load(bitmapImage)
+              .diskCacheStrategy(DiskCacheStrategy.ALL)
+              .placeholder(R.drawable.ic_image_upload)
+              .into(imageLaporan);
 
-                                            @Override
-                                            public void onPermissionRationaleShouldBeShown(List<PermissionRequest> permissions, PermissionToken token) {
-                                                token.continuePermissionRequest();
-                                            }
-                                        }).check();
-                                break;
-                        }
-                    });
-            pictureDialog.show();
-        });
+      strBase64Photo = BitmapManager.bitmapToBase64(bitmapImage);
+    }
+  }
 
-        inputTanggal.setOnClickListener(view -> {
-            Calendar tanggalJemput = Calendar.getInstance();
-            DatePickerDialog.OnDateSetListener date = (view1, year, monthOfYear, dayOfMonth) -> {
-                tanggalJemput.set(Calendar.YEAR, year);
-                tanggalJemput.set(Calendar.MONTH, monthOfYear);
-                tanggalJemput.set(Calendar.DAY_OF_MONTH, dayOfMonth);
-
-                String strFormatDefault = "d MMMM yyyy";
-                SimpleDateFormat simpleDateFormat = new SimpleDateFormat(strFormatDefault, Locale.getDefault());
-                inputTanggal.setText(simpleDateFormat.format(tanggalJemput.getTime()));
-            };
-
-            new DatePickerDialog(ReportActivity.this, date,
-                    tanggalJemput.get(Calendar.YEAR),
-                    tanggalJemput.get(Calendar.MONTH),
-                    tanggalJemput.get(Calendar.DAY_OF_MONTH)).show();
-        });
+  private void setStatusBar() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+      getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
+              View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
     }
 
-    private void setSendLaporan() {
-        fabSend.setOnClickListener(v -> {
-            String strNama = inputNama.getText().toString();
-            String strTelepon = inputTelepon.getText().toString();
-            String strLokasi = inputLokasi.getText().toString();
-            String strTanggal = inputTanggal.getText().toString();
-            String strLaporan = inputLaporan.getText().toString();
-
-            if (strFilePath == null || strNama.isEmpty() || strTelepon.isEmpty() || strLokasi.isEmpty() || strTanggal.isEmpty() || strLaporan.isEmpty()) {
-                Toast.makeText(ReportActivity.this, "Data tidak boleh ada yang kosong!", Toast.LENGTH_SHORT).show();
-            } else {
-                inputDataViewModel.addLaporan(strTitle, strBase64Photo, strNama, strLokasi, strTanggal, strLaporan, strTelepon);
-                Toast.makeText(ReportActivity.this, "Laporan Anda terkirim, tunggu info selanjutnya ya!", Toast.LENGTH_SHORT).show();
-                finish();
-            }
-        });
+    if (Build.VERSION.SDK_INT >= 21) {
+      setWindowFlag(this, WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS, false);
+      getWindow().setStatusBarColor(Color.TRANSPARENT);
     }
+  }
 
-    private File createImageFile() throws IOException {
-        strTimeStamp = new SimpleDateFormat("dd MMMM yyyy HH:mm").format(new Date());
-        strImageName = "IMG_";
-        fileDirectoty = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "");
-        imageFilename = File.createTempFile(strImageName, ".jpg", fileDirectoty);
-        strFilePath = imageFilename.getAbsolutePath();
-        return imageFilename;
+  public static void setWindowFlag(Activity activity, final int bits, boolean on) {
+    Window window = activity.getWindow();
+    WindowManager.LayoutParams layoutParams = window.getAttributes();
+    if (on) {
+      layoutParams.flags |= bits;
+    } else {
+      layoutParams.flags &= ~bits;
     }
+    window.setAttributes(layoutParams);
+  }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        for (int grantResult : grantResults) {
-            if (grantResult == PackageManager.PERMISSION_GRANTED) {
-                Intent intent = getIntent();
-                finish();
-                startActivity(intent);
-            }
-        }
+  @Override
+  public boolean onOptionsItemSelected(MenuItem item) {
+    if (item.getItemId() == android.R.id.home) {
+      finish();
+      return true;
     }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQ_CAMERA && resultCode == RESULT_OK) {
-            convertImage(strFilePath);
-        } else if (requestCode == REQUEST_PICK_PHOTO && resultCode == RESULT_OK) {
-            Uri selectedImage = data.getData();
-            String[] filePathColumn = {MediaStore.Images.Media.DATA};
-            assert selectedImage != null;
-            Cursor cursor = getContentResolver().query(selectedImage, filePathColumn, null, null, null);
-            assert cursor != null;
-            cursor.moveToFirst();
-            int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
-            String mediaPath = cursor.getString(columnIndex);
-            cursor.close();
-            strFilePath = mediaPath;
-            convertImage(mediaPath);
-        }
-    }
-
-    private void convertImage(String imageFilePath) {
-        File imageFile = new File(imageFilePath);
-        if (imageFile.exists()) {
-            BitmapFactory.Options options = new BitmapFactory.Options();
-            final Bitmap bitmapImage = BitmapFactory.decodeFile(strFilePath, options);
-
-            Glide.with(this)
-                    .load(bitmapImage)
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .placeholder(R.drawable.ic_image_upload)
-                    .into(imageLaporan);
-
-            strBase64Photo = BitmapManager.bitmapToBase64(bitmapImage);
-        }
-    }
-
-    private void setStatusBar() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
-        }
-
-        if (Build.VERSION.SDK_INT >= 21) {
-            setWindowFlag(this, WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS, false);
-            getWindow().setStatusBarColor(Color.TRANSPARENT);
-        }
-    }
-
-    public static void setWindowFlag(Activity activity, final int bits, boolean on) {
-        Window window = activity.getWindow();
-        WindowManager.LayoutParams layoutParams = window.getAttributes();
-        if (on) {
-            layoutParams.flags |= bits;
-        } else {
-            layoutParams.flags &= ~bits;
-        }
-        window.setAttributes(layoutParams);
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == android.R.id.home) {
-            finish();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
+    return super.onOptionsItemSelected(item);
+  }
 
 }

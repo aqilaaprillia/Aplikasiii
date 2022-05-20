@@ -54,7 +54,7 @@
             android:layout_marginStart="10dp"
             android:layout_marginTop="5dp"
             android:layout_marginEnd="10dp"
-            android:text="@string/app_name"
+            android:text="waktu laporan"
             android:textColor="@color/black"
             android:textSize="14sp" />
 
@@ -67,18 +67,19 @@
             android:layout_marginEnd="10dp"
             android:ellipsize="end"
             android:maxLines="2"
-            android:text="@string/app_name"
+            android:text="laporan"
             android:textColor="@color/black"
             android:textSize="12sp" />
 
         <TextView
+            android:id="@+id/tvUbah"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="end"
             android:layout_marginTop="20dp"
             android:layout_marginEnd="15dp"
             android:layout_marginBottom="10dp"
-            android:text="Laporan Diterima"
+            android:text="Ubah Laporan"
             android:textColor="@android:color/holo_blue_light"
             android:textSize="16sp"
             android:textStyle="bold" />

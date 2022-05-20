@@ -1,6 +1,8 @@
 package com.example.aplikasimanagemetaset.ui.history;
 
 import android.content.Context;
+import android.content.Intent;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.AplikasiManagemetAset.R;
 import com.example.aplikasimanagemetaset.model.ModelDatabase;
+import com.example.aplikasimanagemetaset.ui.report.ReportActivity;
 
 import java.util.List;
 
@@ -55,12 +58,21 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
     public void onBindViewHolder(HistoryAdapter.ViewHolder holder, int position) {
         final ModelDatabase data = modelDatabase.get(position);
 
+        if (data == null) return;
+
+//        Log.d("category", data.kategori);
+//        Log.d("getNama", data.nama);
+//        Log.d("getTanggal", data.tanggal);
+//        Log.d("getLokasi", data.lokasi);
+
         holder.tvKategori.setText(data.getKategori());
-        holder.tvNama.setText(data.getKategori());
+        holder.tvNama.setText(data.getNama());
         holder.tvDate.setText(data.getTanggal());
         holder.tvLokasi.setText(data.getLokasi());
 
-        switch (data.getKategori()) {
+        if (data.kategori == null) return;
+
+        switch (data.kategori) {
             case "Laporan Kebakaran":
                 holder.layoutHeader.setBackgroundResource(R.color.red);
                 break;
@@ -84,7 +96,7 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
 
     public class ViewHolder extends RecyclerView.ViewHolder {
 
-        public TextView tvKategori, tvNama, tvDate, tvLokasi;
+        public TextView tvKategori, tvNama, tvDate, tvLokasi, tvUbah;
         public CardView cvHistory;
         public LinearLayout layoutHeader;
 
@@ -96,6 +108,25 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
             tvLokasi = itemView.findViewById(R.id.tvLokasi);
             cvHistory = itemView.findViewById(R.id.cvHistory);
             layoutHeader = itemView.findViewById(R.id.layoutHeader);
+            tvUbah = itemView.findViewById(R.id.tvUbah);
+
+            tvUbah.setOnClickListener(view -> {
+                ModelDatabase modelLaundry = modelDatabase.get(getAdapterPosition());
+
+                Intent intent = new Intent(mContext, ReportActivity.class);
+                intent.putExtra("TITLE", modelLaundry.kategori);
+                intent.putExtra("EXTRA_TYPE", "edit");
+
+                intent.putExtra("EXTRA_UID", modelLaundry.uid);
+//                intent.putExtra("EXTRA_IMAGE", modelLaundry.image);
+                intent.putExtra("EXTRA_NAMA", modelLaundry.nama);
+                intent.putExtra("EXTRA_TELEPON", modelLaundry.telepon);
+                intent.putExtra("EXTRA_LOKASI", modelLaundry.lokasi);
+                intent.putExtra("EXTRA_TANGGAL", modelLaundry.tanggal);
+                intent.putExtra("EXTRA_ISI_LAPORAN", modelLaundry.isi_laporan);
+
+                mContext.startActivity(intent);
+            });
 
             cvHistory.setOnClickListener(view -> {
                 ModelDatabase modelLaundry = modelDatabase.get(getAdapterPosition());
