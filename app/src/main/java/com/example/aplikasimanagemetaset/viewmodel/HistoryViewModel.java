@@ -42,6 +42,10 @@ public class HistoryViewModel extends AndroidViewModel {
         return modelLaundry;
     }
 
+    public LiveData<ModelDatabase> getDataLaporanById(int uid) {
+        return databaseDao.getReport(uid);
+    }
+
     public void updateData(
             final int uid,
             final String kategori,
@@ -56,7 +60,7 @@ public class HistoryViewModel extends AndroidViewModel {
             ModelDatabase modelDatabase = new ModelDatabase();
             modelDatabase.uid = uid;
             modelDatabase.kategori = kategori;
-//        modelDatabase.image = image;
+            modelDatabase.image = image;
             modelDatabase.nama = nama;
             modelDatabase.lokasi = lokasi;
             modelDatabase.tanggal = tanggal;

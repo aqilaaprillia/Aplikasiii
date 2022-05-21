@@ -60,11 +60,6 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
 
         if (data == null) return;
 
-//        Log.d("category", data.kategori);
-//        Log.d("getNama", data.nama);
-//        Log.d("getTanggal", data.tanggal);
-//        Log.d("getLokasi", data.lokasi);
-
         holder.tvKategori.setText(data.getKategori());
         holder.tvNama.setText(data.getNama());
         holder.tvDate.setText(data.getTanggal());
@@ -114,16 +109,9 @@ public class HistoryAdapter extends RecyclerView.Adapter<HistoryAdapter.ViewHold
                 ModelDatabase modelLaundry = modelDatabase.get(getAdapterPosition());
 
                 Intent intent = new Intent(mContext, ReportActivity.class);
-                intent.putExtra("TITLE", modelLaundry.kategori);
                 intent.putExtra("EXTRA_TYPE", "edit");
-
                 intent.putExtra("EXTRA_UID", modelLaundry.uid);
-//                intent.putExtra("EXTRA_IMAGE", modelLaundry.image);
-                intent.putExtra("EXTRA_NAMA", modelLaundry.nama);
-                intent.putExtra("EXTRA_TELEPON", modelLaundry.telepon);
-                intent.putExtra("EXTRA_LOKASI", modelLaundry.lokasi);
-                intent.putExtra("EXTRA_TANGGAL", modelLaundry.tanggal);
-                intent.putExtra("EXTRA_ISI_LAPORAN", modelLaundry.isi_laporan);
+                intent.putExtra("TITLE", modelLaundry.kategori);
 
                 mContext.startActivity(intent);
             });

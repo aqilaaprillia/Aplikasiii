@@ -14,6 +14,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.util.Base64;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
@@ -95,23 +96,26 @@ public class ReportActivity extends AppCompatActivity {
 
     MODE = mode;
 
-    uid = intent.getIntExtra("EXTRA_UID", 0);
-//    String image = intent.getDataString("EXTRA_IMAGE");
-    String nama = intent.getStringExtra("EXTRA_NAMA");
-    String telepon = intent.getStringExtra("EXTRA_TELEPON");
-    String lokasi = intent.getStringExtra("EXTRA_LOKASI");
-    String tanggal = intent.getStringExtra("EXTRA_TANGGAL");
-    String isi_laporan = intent.getStringExtra("EXTRA_ISI_LAPORAN");
-
     fabSend.setText("UPDATE LAPORAN");
 
-//    convertImage(image);
+    uid = intent.getIntExtra("EXTRA_UID", 0);
 
-    inputNama.setText(nama);
-    inputTelepon.setText(telepon);
-    inputLokasi.setText(lokasi);
-    inputTanggal.setText(tanggal);
-    inputLaporan.setText(isi_laporan);
+    // observer
+    historyViewModel.getDataLaporanById(uid).observe(this, modelDatabase -> {
+      if (modelDatabase == null) return;
+
+      strBase64Photo = modelDatabase.image;
+
+      inputNama.setText(modelDatabase.nama);
+      inputTelepon.setText(modelDatabase.telepon);
+      inputLokasi.setText(modelDatabase.lokasi);
+      inputTanggal.setText(modelDatabase.tanggal);
+      inputLaporan.setText(modelDatabase.isi_laporan);
+
+      if (strBase64Photo != null) {
+        setImageWithBase64(strBase64Photo);
+      }
+    });
   }
 
   private void setInitLayout() {
@@ -245,12 +249,12 @@ public class ReportActivity extends AppCompatActivity {
         inputDataViewModel.addLaporan(strTitle, strBase64Photo, strNama, strLokasi, strTanggal, strLaporan, strTelepon);
         Toast.makeText(ReportActivity.this, "Laporan Anda terkirim, tunggu info selanjutnya ya!", Toast.LENGTH_SHORT).show();
       } else {
-        if (strNama.isEmpty() || strTelepon.isEmpty() || strLokasi.isEmpty() || strTanggal.isEmpty() || strLaporan.isEmpty()) {
+        if (strBase64Photo == null || strNama.isEmpty() || strTelepon.isEmpty() || strLokasi.isEmpty() || strTanggal.isEmpty() || strLaporan.isEmpty()) {
           Toast.makeText(ReportActivity.this, "Data tidak boleh ada yang kosong!", Toast.LENGTH_SHORT).show();
           return;
         }
         // update
-        historyViewModel.updateData(uid, strTitle, null, strNama, strLokasi, strTanggal, strLaporan, strTelepon );
+        historyViewModel.updateData(uid, strTitle, strBase64Photo, strNama, strLokasi, strTanggal, strLaporan, strTelepon );
         Toast.makeText(ReportActivity.this, "Laporan Anda telah diupdate", Toast.LENGTH_SHORT).show();
       }
       finish();
@@ -312,6 +316,15 @@ public class ReportActivity extends AppCompatActivity {
 
       strBase64Photo = BitmapManager.bitmapToBase64(bitmapImage);
     }
+  }
+
+  private void setImageWithBase64(String base64Image) {
+    byte[] imageByteArray = Base64.decode(base64Image, Base64.DEFAULT);
+    Glide.with(this)
+            .load(imageByteArray)
+            .diskCacheStrategy(DiskCacheStrategy.ALL)
+            .placeholder(R.drawable.ic_image_upload)
+            .into(imageLaporan);
   }
 
   private void setStatusBar() {

@@ -25,6 +25,9 @@ public interface DatabaseDao {
     @Query("SELECT * FROM tbl_laporan")
     LiveData<List<ModelDatabase>> getAllReport();
 
+    @Query("SELECT * FROM tbl_laporan WHERE uid = :uid")
+    LiveData<ModelDatabase> getReport(int uid);
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insertData(ModelDatabase modelDatabases);
 
